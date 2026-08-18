@@ -86,6 +86,65 @@ mod tests {
             assert_eq!(numbers, (0..1000).collect::<Vec<u32>>());
         }
 
+        #[test]
+        fn hashmap_wraps_a_skeleton_map() {
+            let mut open_obj = MaybeUninit::uninit();
+            let skel_builder = LoopSkelBuilder::default();
+            let open_skel = skel_builder.open(&mut open_obj).expect("open skel");
+            let skel = open_skel.load().expect("load skel");
+
+            let counts: bpf::HashMap<u32, u64> =
+                bpf::HashMap::from_map(&skel.maps.counts).expect("wrap counts map");
+
+            assert!(counts.is_empty());
+            assert_eq!(counts.insert(1, 10).expect("insert"), None);
+            assert_eq!(counts.insert(1, 20).expect("insert"), Some(10));
+            assert_eq!(counts.get(&1).expect("get"), Some(20));
+            assert_eq!(counts.get(&2).expect("get"), None);
+            assert!(counts.contains_key(&1).expect("contains_key"));
+            assert!(!counts.insert_new(1, 99).expect("insert_new"));
+            assert!(counts.insert_new(2, 200).expect("insert_new"));
+            assert!(counts.replace(&2, 201).expect("replace"));
+            assert!(!counts.replace(&3, 1).expect("replace"));
+
+            let mut entries: Vec<(u32, u64)> = counts.iter().expect("iter").collect();
+            entries.sort();
+            assert_eq!(entries, vec![(1, 20), (2, 201)]);
+
+            assert_eq!(counts.len(), 2);
+            assert_eq!(counts.remove(&1).expect("remove"), Some(20));
+            assert_eq!(counts.remove(&1).expect("remove"), None);
+            assert_eq!(counts.len(), 1);
+
+            counts.clear().expect("clear");
+            assert!(counts.is_empty());
+        }
+
+        #[test]
+        fn hashmap_create_supports_batch_operations() {
+            let map: bpf::HashMap<u32, u64> =
+                bpf::HashMap::create(Some("standalone"), 64).expect("create hash map");
+
+            let entries: Vec<(u32, u64)> = (0..32).map(|i| (i, i as u64 * 2)).collect();
+            map.insert_batch(&entries).expect("insert_batch");
+            assert_eq!(map.len(), entries.len());
+
+            for (k, v) in &entries {
+                assert_eq!(map.get(k).expect("get"), Some(*v));
+            }
+
+            let keys: Vec<u32> = entries.iter().map(|(k, _)| *k).collect();
+            map.remove_batch(&keys[..16]).expect("remove_batch");
+            assert_eq!(map.len(), 16);
+
+            for k in &keys[..16] {
+                assert_eq!(map.get(k).expect("get"), None);
+            }
+            for k in &keys[16..] {
+                assert!(map.get(k).expect("get").is_some());
+            }
+        }
+
         fn wait_for_events(writer: &InMemoryWriter, expected: usize, timeout: Duration) -> String {
             let start = Instant::now();
             loop {

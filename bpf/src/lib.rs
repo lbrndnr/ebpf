@@ -4,6 +4,9 @@ pub use libbpf_rs as libbpf;
 mod obj;
 pub use obj::OpenObject;
 
+mod hashmap;
+pub use hashmap::{HashMap, Pod};
+
 mod prog;
 pub use prog::Program;
 
