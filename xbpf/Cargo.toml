@@ -13,6 +13,7 @@ keywords.workspace = true
 glob = { version = "0.3.4", optional = true }
 libbpf-cargo = "0.27.0"
 libbpf-rs = "0.27.0"
+tokio = { version = "1.53.1", features = ["sync"], optional = true }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"], optional = true }
 
@@ -24,5 +25,6 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 [features]
 default = ["build", "tracing"]
 build = ["dep:glob", "dep:tracing-subscriber"]
-tracing = []
+map = ["dep:tokio"]
+tracing = ["map"]
 tracing-source-loc = []

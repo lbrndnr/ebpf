@@ -1,3 +1,4 @@
+use crate::map::FromRecord;
 use std::{error::Error, fmt};
 
 use tracing::Level;
@@ -109,6 +110,14 @@ impl TryFrom<&[u8]> for Event {
             file,
             line,
         })
+    }
+}
+
+impl FromRecord for Event {
+    type Error = EventDecodeError;
+
+    fn from_record(record: &[u8]) -> Result<Self, Self::Error> {
+        Event::try_from(record)
     }
 }
 

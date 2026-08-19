@@ -70,7 +70,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn loop_iterations_are_traced_in_order() {
+    fn high_tracing_freq() {
         let writer = InMemoryWriter::default();
         tracing_subscriber::fmt()
             .with_max_level(Level::DEBUG)
